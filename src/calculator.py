@@ -59,20 +59,16 @@ class CalculatorApp(QWidget):
         self.current_input = ""
         self.result_display.clear()
 
-
-def calculadora_app_main_func(version):
+def calculator_app_main_func(version):
     app = QApplication(sys.argv)
-    version = "v0.0.1"
     window = CalculatorApp(version)
     window.show()
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
-
     version = "v0.0.1"
-
     # app = QApplication(sys.argv)
     # window = CalculatorApp(version)
     # window.show()
     # sys.exit(app.exec_())
-    calculadora_app_main_func(version)
+    calculator_app_main_func(version)
