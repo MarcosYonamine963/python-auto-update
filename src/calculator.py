@@ -1,5 +1,6 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit
+from PyQt5 import QtGui
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QMessageBox
 
 class CalculatorApp(QWidget):
     def __init__(self, version):
@@ -59,16 +60,23 @@ class CalculatorApp(QWidget):
         self.current_input = ""
         self.result_display.clear()
 
-def calculator_app_main_func(version):
+    def closeEvent(self, event):
+        reply = QMessageBox.question(
+            self, "Wanna close?", "Are you sure you want to exit?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
+
+
+
+if __name__ == "__main__":
+    
+    version = "v0.0.1"
     app = QApplication(sys.argv)
     window = CalculatorApp(version)
     window.show()
     sys.exit(app.exec_())
-
-if __name__ == "__main__":
-    version = "v0.0.1"
-    # app = QApplication(sys.argv)
-    # window = CalculatorApp(version)
-    # window.show()
-    # sys.exit(app.exec_())
-    calculator_app_main_func(version)
