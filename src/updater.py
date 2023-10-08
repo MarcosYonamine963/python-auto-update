@@ -15,11 +15,12 @@ class Updater(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.initUI()
+
         self.state.connect(self.on_state_changed)
 
         self.current_version = self.get_current_ver()
 
-        self.initUI()
 
     def initUI(self):
 
@@ -82,6 +83,19 @@ class Updater(QWidget):
 
             case 1: # Start of update
 
+                self.operational_system = sys.platform
+
+                if self.operational_system == "win32":
+                    self.output_message("Running on Windows")
+                    self.download_index = 1
+                elif self.operational_system == "linux":
+                    self.output_message("Running on Linux")
+                    self.download_index = 0
+                else:
+                    self.output_message("Unsupported Operational System")
+                    self.start_button.setEnabled(False)
+                
+
                 self.output_message(f"Current installed version: {self.current_version}")
 
                 self.output_message("Connecting to Server")
@@ -136,9 +150,13 @@ class Updater(QWidget):
 
                 self.output_message("Downloading files... this may take a while")
                 
-                download_url = self.release_data["assets"][0]["browser_download_url"]
+                download_url = self.release_data["assets"][self.download_index]["browser_download_url"]
                 self.download_path = os.path.join(self.install_dir, "new_version.zip")
                 
+                nome_do_arquivo = os.path.basename(download_url)
+
+                print(nome_do_arquivo)
+
                 self.output_message(f"Downloading to: {self.download_path}")
                 self.output_message("Please, do not close the Updater")
 
