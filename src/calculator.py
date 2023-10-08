@@ -75,7 +75,7 @@ class CalculatorApp(QWidget):
 
 if __name__ == "__main__":
     
-    version = "v0.0.1"
+    version = "v0.0.0"
     app = QApplication(sys.argv)
     window = CalculatorApp(version)
     window.show()
