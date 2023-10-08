@@ -20,7 +20,7 @@ def ask_for_update():
 
 
 if __name__ == "__main__":
-    version = "v0.0.1"
+    version = "v0.0.2"
 
     app = QApplication(sys.argv)
 
