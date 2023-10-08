@@ -4,7 +4,7 @@ import os
 import subprocess
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QMessageBox, QTextEdit
 from PyQt5.QtGui import QIcon, QColor, QTextCharFormat,QTextCursor
-import requests
+import json
 
 
 def ask_for_update():
@@ -15,26 +15,30 @@ def ask_for_update():
     msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
     return msg.exec()
 
-    
-
-
-
 if __name__ == "__main__":
-    version = "v0.0.2"
+    __version__ = "v0.0.2"
 
     app = QApplication(sys.argv)
 
     result = ask_for_update()
 
     if(result == QMessageBox.Yes):
-        # print("Yeeeeeesss")
+
+        # update json file
+        json_data = {
+            "current_version": f"{__version__}"
+        }
+
+        with open('version.json', 'w') as v_file:
+            json.dump(json_data, v_file, indent=4)
+
+        # Start updater
         subprocess.Popen("./updater")
         sys.exit()
 
     else:
-        # print("Nooooooooo")
         pass
 
-    window = calculator.CalculatorApp(version)
+    window = calculator.CalculatorApp(__version__)
     window.show()
     sys.exit(app.exec_())
