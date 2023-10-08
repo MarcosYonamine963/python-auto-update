@@ -1,13 +1,11 @@
 import sys
 import os
 import subprocess
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QMessageBox, QTextEdit, QMainWindow, QProgressBar
-from PyQt5.QtGui import QIcon, QColor, QTextCharFormat,QTextCursor
-from PyQt5 import QtCore
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QTextEdit, QProgressBar
+from PyQt5.QtGui import QTextCursor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 import requests
-import time
-import math
+import json
 
 
 class Updater(QWidget):
@@ -19,12 +17,15 @@ class Updater(QWidget):
 
         self.state.connect(self.on_state_changed)
 
+        self.current_version = self.get_current_ver()
+
         self.initUI()
 
     def initUI(self):
 
         self.setWindowTitle("Updater")
         self.setGeometry(500,100,600,500)
+        self.setFixedSize(600,500)
 
         # Create generic layout
         self.label = QLabel("Updating...")
@@ -46,7 +47,7 @@ class Updater(QWidget):
         self.cancel_button.clicked.connect(self.cancel_on_clicked)
 
         self.layout = QVBoxLayout(self)
-        self.layout.addWidget(self.label)
+        # self.layout.addWidget(self.label)
         self.layout.addWidget(self.text_edit)
         self.layout.addWidget(self.label_download)
         self.layout.addWidget(self.progress_bar)
@@ -60,14 +61,12 @@ class Updater(QWidget):
         self.text_edit.repaint()
         print("Update Canceled")
 
-        for x in range(3):
-            self.text_edit.append(f"Leaving in {3 - x}")
-            self.text_edit.repaint()
-            print(f"Leaving in {x}")
-            time.sleep(1)
+        # for x in range(3):
+        #     self.text_edit.append(f"Leaving in {3 - x}")
+        #     self.text_edit.repaint()
+        #     print(f"Leaving in {x}")
+        #     time.sleep(1)
         sys.exit()
-
-
         
     def start_on_clicked(self):
         self.output_message("Starting Updater")
@@ -82,6 +81,8 @@ class Updater(QWidget):
 
             case 1: # Start of update
 
+                self.output_message(f"Current installed version: {self.current_version}")
+
                 self.output_message("Connecting to Server")
                 
                 self.repo_owner = "MarcosYonamine963"
@@ -89,28 +90,46 @@ class Updater(QWidget):
 
                 self.api_url = f"https://api.github.com/repos/{self.repo_owner}/{self.repo_name}/releases/latest"
 
-                self.request_info_response = requests.get(self.api_url)
+                try:
+                    self.request_info_response = requests.get(self.api_url)
 
-                if self.request_info_response.status_code == 200:
+                except requests.exceptions.ConnectionError:
+                    self.error("CONNECTION FAIL")
+                    self.output_message("Check network connection, and try again")
 
-                    self.output_message("Connection Successful")
-                    self.state.emit(2)
+                except:
+                    self.error("UNKNOWN")
 
                 else:
-                    self.error("Connection FAIL")
+                    if self.request_info_response.status_code == 200:
+
+                        self.output_message("Connection Successful")
+                        self.state.emit(2)
+
+                    elif self.request_info_response.status_code == 404:
+                        self.error("SERVER NOT FOUND OR OFFLINE")
+                        self.output_message("Contact Support")
                     
             case 2:
 
                 self.output_message("Searching for Updates")
                 
                 self.release_data = self.request_info_response.json()
-                latest_version = self.release_data["tag_name"]
+                self.latest_version = self.release_data["tag_name"]
                 self.install_dir = os.getcwd()
 
-                self.output_message(f"Latest version: {latest_version}")
-                time.sleep(2)
+                # self.output_message(f"Latest version: {latest_version}")
 
-                self.state.emit(3)
+                if(self.latest_version != self.current_version):
+
+                    self.output_message(f"New version found: {self.latest_version}")
+                    self.state.emit(3)
+
+                else:
+
+                    self.output_message("Already on latest version!")
+                    self.state.emit(5)
+
 
             case 3:
 
@@ -122,15 +141,15 @@ class Updater(QWidget):
                 self.output_message(f"Downloading to: {self.download_path}")
                 self.output_message("Please, do not close the Updater")
 
-                ## Test this during executable file
-                # with open(self.download_path, "wb") as f:
-                #     download_response = requests.get(download_url)
-                #     f.write(download_response.content)
-
                 response = requests.get(download_url, stream=True)
                 total_size = int(response.headers.get('content-length', 0))
                 block_size = 1024
                 progress_bar_length = 50
+
+
+                self.start_button.setEnabled(False)
+                self.cancel_button.setEnabled(False)
+
 
                 ######  This append is a bug fix  #######
                 self.text_edit.append("DONT ERASE ME\n")
@@ -162,34 +181,57 @@ class Updater(QWidget):
 
                 self.progress_bar.setValue(100)
                 self.progress_bar.repaint()
-                self.output_message("Download Complete")
+                self.output_message("\nDownload Complete")
+
+                
 
                 self.state.emit(4)
 
             case 4:
 
-                self.output_message("Deleting main application file")
-                self.output_message("Please, do not close the Updater")
+                self.output_message("Starting Installation Process")
+                self.output_message("Please, do not close the Updater until finished")
 
-                self.cancel_button.setEnabled(False)
 
-                # os.remove(self.install_dir + "/main") # TODO verify this
+                
 
-                # self.appendColoredText("Extracting files", QColor("black"))
-                # self.text_edit.append("testeee")
-                # print("Extracting files")
-                # subprocess.run(["unzip", self.download_path, "-d", self.install_dir])
+                try:
+                    os.remove(self.install_dir + "/main")
+                except:
+                    pass
 
-                # self.appendColoredText("Installing", QColor("black"))
-                # self.text_edit.append("testeee")
-                # print("Installing")
-                # os.remove(self.download_path)
+                self.output_message("Extracting Files")
+                subprocess.run(["unzip", self.download_path, "-d", self.install_dir])
 
-                # self.appendColoredText("Updating successfull!", QColor("green"))
-                # print("Updating successfull!")
+                # # update json file
+                # json_data = {
+                #     "current_version": f"{self.latest_version}"
+                # }
 
-                # self.appendColoredText("Please, restart the program", QColor("black"))
-                # print("Please, restart the program")
+                # with open('version.json', 'w') as v_file:
+                #     json.dump(json_data, v_file, indent=4)
+
+                # DELETE JSON FILE (IT IS CREATED BY MAIN PROGRAM)
+                try:
+                    os.remove('version.json')
+                except:
+                    pass
+
+                self.output_message("Installing update")
+                os.remove(self.download_path)
+
+                
+
+                self.output_message("Install Complete!")
+
+                self.state.emit(5)
+
+            case 5:
+
+                self.output_message("Please, exit updater and restart the program")
+                self.start_button.setEnabled(False)
+                self.cancel_button.setText("Exit")
+                self.cancel_button.setEnabled(True)
 
 
     def output_message(self, message):
@@ -201,7 +243,18 @@ class Updater(QWidget):
         self.text_edit.append(f"ERROR: {error_code}")
         self.state.emit(0) # reset state machine
 
+    def get_current_ver(self):
+        # Reads from a json file
+        try:
+            with open('version.json', 'r') as v_file:
+                return json.load(v_file)["current_version"]
+        except:
+            with open('version.json', 'w') as v_file:
 
+                json_data = {
+                    "current_version": "v0.0.0"
+                }
+                json.dump(json_data, v_file, indent=4)
 
 def main():
 
