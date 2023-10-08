@@ -1,10 +1,8 @@
 import calculator
 import sys
-import os
 import subprocess
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QMessageBox, QTextEdit
-from PyQt5.QtGui import QIcon, QColor, QTextCharFormat,QTextCursor
 import json
+from PyQt5.QtWidgets import QApplication, QMessageBox
 
 
 def ask_for_update():
@@ -33,8 +31,16 @@ if __name__ == "__main__":
             json.dump(json_data, v_file, indent=4)
 
         # Start updater
-        subprocess.Popen("./updater")
-        sys.exit()
+        try:
+            subprocess.Popen("./updater")
+            sys.exit()
+        except:
+            msg = QMessageBox()
+            msg.setWindowTitle("Error")
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("Updater not Found")
+            msg.exec()
+
 
     else:
         pass
