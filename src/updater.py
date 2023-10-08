@@ -60,6 +60,7 @@ class Updater(QWidget):
         self.text_edit.append("Update Canceled!")
         self.text_edit.repaint()
         print("Update Canceled")
+        self.delete_version_json()
 
         # for x in range(3):
         #     self.text_edit.append(f"Leaving in {3 - x}")
@@ -211,27 +212,28 @@ class Updater(QWidget):
                 # with open('version.json', 'w') as v_file:
                 #     json.dump(json_data, v_file, indent=4)
 
-                # DELETE JSON FILE (IT IS CREATED BY MAIN PROGRAM)
-                try:
-                    os.remove('version.json')
-                except:
-                    pass
-
                 self.output_message("Installing update")
                 os.remove(self.download_path)
-
-                
-
-                self.output_message("Install Complete!")
 
                 self.state.emit(5)
 
             case 5:
+                # DELETE JSON FILE (IT IS CREATED BY MAIN PROGRAM)
+                self.delete_version_json()
+
+                self.output_message("Install Complete!")
 
                 self.output_message("Please, exit updater and restart the program")
                 self.start_button.setEnabled(False)
                 self.cancel_button.setText("Exit")
                 self.cancel_button.setEnabled(True)
+
+    def delete_version_json(self):
+        # DELETE JSON FILE (IT IS CREATED BY MAIN PROGRAM)
+        try:
+            os.remove('version.json')
+        except:
+            pass
 
 
     def output_message(self, message):
