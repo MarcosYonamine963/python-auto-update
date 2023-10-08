@@ -1,5 +1,6 @@
 import calculator
 import sys
+import os
 import subprocess
 import json
 import time
@@ -42,6 +43,10 @@ if __name__ == "__main__":
             msg.setIcon(QMessageBox.Critical)
             msg.setText("Updater not Found")
             msg.exec()
+            try:
+                os.remove('version.json')
+            except:
+                pass
 
 
     else:
