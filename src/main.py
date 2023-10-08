@@ -2,6 +2,7 @@ import calculator
 import sys
 import subprocess
 import json
+import time
 from PyQt5.QtWidgets import QApplication, QMessageBox
 
 
@@ -33,7 +34,8 @@ if __name__ == "__main__":
         # Start updater
         try:
             subprocess.Popen("./updater")
-            sys.exit()
+            time.sleep(1)
+            # sys.exit()
         except:
             msg = QMessageBox()
             msg.setWindowTitle("Error")
@@ -43,8 +45,7 @@ if __name__ == "__main__":
 
 
     else:
-        pass
 
-    window = calculator.CalculatorApp(__version__)
-    window.show()
-    sys.exit(app.exec_())
+        window = calculator.CalculatorApp(__version__)
+        window.show()
+        sys.exit(app.exec_())
