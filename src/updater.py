@@ -6,11 +6,21 @@ from PyQt5.QtGui import QTextCursor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 import requests
 import json
+from enum import Enum
+import zipfile
+
+class States_Enum(Enum):
+    IDLE = 0
+    START = 1
+    SEARCH_UPDATES = 2
+    DOWNLOAD = 3
+    EXTRACT = 4
+    COMPLETE = 5
 
 
 class Updater(QWidget):
 
-    state = pyqtSignal(int)
+    state = pyqtSignal(States_Enum)
 
     def __init__(self):
         super().__init__()
@@ -28,16 +38,12 @@ class Updater(QWidget):
         self.setGeometry(500,100,600,500)
         self.setFixedSize(600,500)
 
-        # Create generic layout
-        self.label = QLabel("Updating...")
-
         self.text_edit = QTextEdit(self)
         self.text_edit.setReadOnly(True)
 
         self.label_download = QLabel("Download progress")
 
         self.progress_bar = QProgressBar()
-        # self.progress_bar.setVisible(False)
 
         self.start_button = QPushButton("Start")
         self.start_button.setStyleSheet("background-color: green")
@@ -48,7 +54,6 @@ class Updater(QWidget):
         self.cancel_button.clicked.connect(self.cancel_on_clicked)
 
         self.layout = QVBoxLayout(self)
-        # self.layout.addWidget(self.label)
         self.layout.addWidget(self.text_edit)
         self.layout.addWidget(self.label_download)
         self.layout.addWidget(self.progress_bar)
@@ -58,9 +63,7 @@ class Updater(QWidget):
         self.setLayout(self.layout)
 
     def cancel_on_clicked(self):
-        self.text_edit.append("Update Canceled!")
-        self.text_edit.repaint()
-        print("Update Canceled")
+        self.output_message("Update Canceled!")
         self.delete_version_json()
 
         # for x in range(3):
@@ -72,16 +75,16 @@ class Updater(QWidget):
         
     def start_on_clicked(self):
         self.output_message("Starting Updater")
-        self.state.emit(1) # init state machine
+        self.state.emit(States_Enum.START) # init state machine
         
-    @pyqtSlot(int)
+    @pyqtSlot(States_Enum)
     def on_state_changed(self, state):
         match state:
-            case 0:
+            case States_Enum.IDLE:
                 # TODO reenable buttons, reset states
                 pass
 
-            case 1: # Start of update
+            case States_Enum.START: # Start of update
 
                 self.operational_system = sys.platform
 
@@ -119,43 +122,44 @@ class Updater(QWidget):
                     if self.request_info_response.status_code == 200:
 
                         self.output_message("Connection Successful")
-                        self.state.emit(2)
+                        self.state.emit(States_Enum.SEARCH_UPDATES)
 
                     elif self.request_info_response.status_code == 404:
                         self.error("SERVER NOT FOUND OR OFFLINE")
                         self.output_message("Contact Support")
                     
-            case 2:
+            case States_Enum.SEARCH_UPDATES:
 
                 self.output_message("Searching for Updates")
                 
                 self.release_data = self.request_info_response.json()
                 self.latest_version = self.release_data["tag_name"]
-                self.install_dir = os.getcwd()
 
                 # self.output_message(f"Latest version: {latest_version}")
 
                 if(self.latest_version != self.current_version):
 
                     self.output_message(f"New version found: {self.latest_version}")
-                    self.state.emit(3)
+                    self.state.emit(States_Enum.DOWNLOAD)
 
                 else:
 
                     self.output_message("Already on latest version!")
-                    self.state.emit(5)
+                    self.state.emit(States_Enum.COMPLETE)
 
 
-            case 3:
+            case States_Enum.DOWNLOAD:
 
-                self.output_message("Downloading files... this may take a while")
+                # self.output_message("Downloading files... this may take a while")
                 
                 download_url = self.release_data["assets"][self.download_index]["browser_download_url"]
+                self.install_dir = os.getcwd()
                 self.download_path = os.path.join(self.install_dir, "new_version.zip")
-                
-                nome_do_arquivo = os.path.basename(download_url)
 
-                print(nome_do_arquivo)
+                self.output_message(f"Install dir: {self.install_dir}")
+                
+                downloade_filename = os.path.basename(download_url)
+                self.output_message(f"Downloading file: {downloade_filename}")
 
                 self.output_message(f"Downloading to: {self.download_path}")
                 self.output_message("Please, do not close the Updater")
@@ -204,23 +208,32 @@ class Updater(QWidget):
 
                 
 
-                self.state.emit(4)
+                self.state.emit(States_Enum.EXTRACT)
 
-            case 4:
+            case States_Enum.EXTRACT:
 
                 self.output_message("Starting Installation Process")
                 self.output_message("Please, do not close the Updater until finished")
 
-
-                
-
                 try:
-                    os.remove(self.install_dir + "/main")
+
+                    if self.operational_system == "linux":
+                        executable_path = os.path.join(self.install_dir, "main")
+                        os.remove(executable_path)
+
+                    elif self.operational_system == "win32":
+                        executable_path = os.path.join(self.install_dir, "main.exe")
+                        os.remove(executable_path)
                 except:
                     pass
-
+                
                 self.output_message("Extracting Files")
-                subprocess.run(["unzip", self.download_path, "-d", self.install_dir])
+                if self.operational_system == "linux":
+                    subprocess.run(["unzip", self.download_path, "-d", self.install_dir])
+                elif self.operational_system == "win32":
+                    with zipfile.ZipFile(self.download_path, 'r') as zip_ref:
+                        zip_ref.extractall(self.install_dir)
+
 
                 # # update json file
                 # json_data = {
@@ -233,9 +246,9 @@ class Updater(QWidget):
                 self.output_message("Installing update")
                 os.remove(self.download_path)
 
-                self.state.emit(5)
+                self.state.emit(States_Enum.COMPLETE)
 
-            case 5:
+            case States_Enum.COMPLETE:
                 # DELETE JSON FILE (IT IS CREATED BY MAIN PROGRAM)
                 self.delete_version_json()
 
@@ -261,7 +274,7 @@ class Updater(QWidget):
 
     def error(self, error_code):
         self.text_edit.append(f"ERROR: {error_code}")
-        self.state.emit(0) # reset state machine
+        self.state.emit(States_Enum.IDLE) # reset state machine
 
     def get_current_ver(self):
         # Reads from a json file
