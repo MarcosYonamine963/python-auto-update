@@ -8,7 +8,7 @@ import time
 from PyQt5.QtWidgets import QApplication, QMessageBox
 
 
-__version__ = "v0.0.1"
+__version__ = "v0.0.3"
 latest_version = __version__
 repo_owner = "MarcosYonamine963"
 repo_name = "python-auto-update"
